@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#17324d" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Monitor CAE" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="assets/icon.svg" />
+    <link rel="icon" href="assets/icon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="styles.css" />
+    <title>Monitor CAE</title>
+  </head>
+  <body>
+    <header class="app-header">
+      <div>
+        <p class="eyebrow">C1 ADVANCED</p>
+        <h1>Monitor CAE</h1>
+      </div>
+      <span class="offline-badge">Solo su questo iPad</span>
+    </header>
+
+    <nav class="main-nav" aria-label="Navigazione principale">
+      <button class="nav-button is-active" type="button" data-view="entry">Inserisci</button>
+      <button class="nav-button" type="button" data-view="dashboard">Dashboard</button>
+      <button class="nav-button" type="button" data-view="backup">Backup</button>
+    </nav>
+
+    <main>
+      <section class="view is-active" id="entry-view" data-view-panel="entry">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">NUOVA SESSIONE</p>
+            <h2>Inserisci risultati</h2>
+          </div>
+          <p>Le informazioni restano in locale sul dispositivo.</p>
+        </div>
+
+        <form id="entry-form" class="card form-card">
+          <label>
+            Modalità di inserimento
+            <select id="entry-mode" name="mode">
+              <option value="full">Paper completo</option>
+              <option value="exam">Esame intero (18 parti)</option>
+              <option value="single">Singola parte</option>
+            </select>
+          </label>
+
+          <div class="form-grid">
+            <label>
+              Data della sessione
+              <input id="entry-date" name="date" type="date" required />
+            </label>
+            <label id="entry-paper-field">
+              Paper
+              <select id="entry-paper" name="paper"></select>
+            </label>
+          </div>
+
+          <div id="part-controls"></div>
+
+          <label>
+            Note facoltative
+            <textarea id="entry-notes" name="notes" rows="3" placeholder="Es. Cambridge Advanced Trainer 2, Test 3"></textarea>
+          </label>
+
+          <button class="primary-button" type="submit">Salva risultati</button>
+        </form>
+
+        <section id="exam-outcome" class="exam-outcome" hidden aria-live="polite"></section>
+      </section>
+
+      <section class="view" id="dashboard-view" data-view-panel="dashboard">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">PROGRESSI</p>
+            <h2>Dashboard</h2>
+          </div>
+          <p>Le percentuali sono calcolate sui punti effettivi.</p>
+        </div>
+
+        <section class="card filters-card" aria-labelledby="filter-title">
+          <h3 id="filter-title">Filtri</h3>
+          <div class="form-grid">
+            <label>Dal<input id="filter-start" type="date" /></label>
+            <label>Al<input id="filter-end" type="date" /></label>
+          </div>
+          <fieldset>
+            <legend>Paper inclusi</legend>
+            <div id="paper-filter-list" class="checkbox-list"></div>
+          </fieldset>
+          <details class="thresholds">
+            <summary>Soglie colori</summary>
+            <div class="form-grid compact-grid">
+              <label>Rosso sotto il (%)<input id="threshold-low" type="number" min="0" max="100" step="1" value="60" /></label>
+              <label>Giallo fino al (%)<input id="threshold-high" type="number" min="0" max="100" step="1" value="75" /></label>
+            </div>
+          </details>
+        </section>
+
+        <section class="summary-grid" aria-label="Riepilogo generale">
+          <article class="metric-card"><span>Sessioni registrate</span><strong id="metric-sessions">0</strong></article>
+          <article class="metric-card"><span>Percentuale media</span><strong id="metric-average">—</strong></article>
+          <article class="metric-card"><span>Ultima sessione</span><strong id="metric-last-date">—</strong></article>
+        </section>
+
+        <section class="card weakness-card">
+          <h3>Aree da rinforzare</h3>
+          <p id="weakness-message">Inserisci qualche risultato per ricevere un'analisi automatica.</p>
+        </section>
+
+        <section class="dashboard-grid">
+          <article class="card chart-card">
+            <div class="card-title-row">
+              <h3>Composizione per parte</h3>
+              <select id="pie-paper" aria-label="Paper del grafico a torta"></select>
+            </div>
+            <div class="segmented-control" role="group" aria-label="Periodo del grafico a torta">
+              <button class="is-selected" type="button" data-pie-basis="historical">Media storica</button>
+              <button type="button" data-pie-basis="latest">Ultima simulazione</button>
+            </div>
+            <div id="pie-chart" class="pie-chart chart-empty"></div>
+            <p class="chart-note">Gli spicchi confrontano le percentuali delle parti del paper selezionato.</p>
+          </article>
+
+          <article class="card chart-card chart-card-wide">
+            <h3>Le 18 parti: dalla più debole alla più forte</h3>
+            <div id="bar-chart" class="bar-chart chart-empty"></div>
+          </article>
+
+          <article class="card chart-card chart-card-wide">
+            <div class="card-title-row">
+              <h3>Andamento nel tempo</h3>
+              <select id="trend-mode" aria-label="Dettaglio andamento">
+                <option value="paper">Per paper</option>
+                <option value="part">Per singola parte</option>
+              </select>
+            </div>
+            <label class="inline-select">Serie da visualizzare <select id="trend-target"></select></label>
+            <div id="line-chart" class="line-chart chart-empty"></div>
+          </article>
+        </section>
+
+        <section class="card results-card">
+          <h3>Risultati filtrati</h3>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Data</th><th>Paper</th><th>Parte</th><th>Punti</th><th>%</th></tr></thead>
+              <tbody id="results-table"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="card results-card">
+          <div class="card-title-row">
+            <h3>Modifica o elimina</h3>
+            <span id="record-count" class="muted"></span>
+          </div>
+          <div id="record-manager" class="record-manager"></div>
+        </section>
+      </section>
+
+      <section class="view" id="backup-view" data-view-panel="backup">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">PROTEGGI I TUOI DATI</p>
+            <h2>Backup e ripristino</h2>
+          </div>
+          <p>La memoria del browser può essere cancellata: conserva un backup JSON.</p>
+        </div>
+
+        <section class="card backup-card">
+          <h3>Esporta</h3>
+          <p>Il file JSON conserva tutto e può ripristinare l'app. Il CSV è comodo per Excel o Numbers.</p>
+          <div class="button-row">
+            <button id="export-json" class="primary-button" type="button">Scarica backup JSON</button>
+            <button id="export-csv" class="secondary-button" type="button">Esporta CSV</button>
+          </div>
+        </section>
+
+        <section class="card backup-card">
+          <h3>Importa un backup</h3>
+          <label>
+            File JSON
+            <input id="import-file" type="file" accept="application/json,.json" />
+          </label>
+          <label>
+            Modalità
+            <select id="import-mode">
+              <option value="merge">Aggiungi ai dati esistenti</option>
+              <option value="replace">Sostituisci tutti i dati esistenti</option>
+            </select>
+          </label>
+          <button id="import-button" class="secondary-button" type="button">Importa backup</button>
+        </section>
+
+        <section class="card danger-card">
+          <h3>Elimina tutti i dati locali</h3>
+          <p>Questa azione non è annullabile. Scarica prima un backup JSON.</p>
+          <button id="clear-data" class="danger-button" type="button">Elimina dati da questo iPad</button>
+        </section>
+      </section>
+    </main>
+
+    <div id="edit-modal" class="modal" aria-hidden="true">
+      <div class="modal-backdrop" data-close-modal></div>
+      <section class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="edit-title">
+        <button class="close-button" type="button" aria-label="Chiudi" data-close-modal>×</button>
+        <h2 id="edit-title">Modifica risultato</h2>
+        <form id="edit-form">
+          <input id="edit-id" type="hidden" />
+          <div class="form-grid">
+            <label>Data<input id="edit-date" type="date" required /></label>
+            <label>Paper<select id="edit-paper"></select></label>
+          </div>
+          <label>Parte<select id="edit-part"></select></label>
+          <div class="form-grid">
+            <label>Punteggio ottenuto<input id="edit-score" type="number" min="0" step="0.5" required /></label>
+            <label>Punteggio massimo<input id="edit-max-score" type="number" min="0.5" step="0.5" required /></label>
+          </div>
+          <label>Note<textarea id="edit-notes" rows="3"></textarea></label>
+          <div class="button-row">
+            <button class="primary-button" type="submit">Aggiorna</button>
+            <button id="delete-record" class="danger-button" type="button">Elimina</button>
+          </div>
+        </form>
+      </section>
+    </div>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    <script src="app.js" defer></script>
+  </body>
+</html>
